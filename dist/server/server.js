@@ -3,13 +3,20 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const express = require("express");
 const http = require("http");
 const WebSocket = require("ws");
+const enableWs = require('express-ws');
 const app = express();
+const router = express.Router();
 //inicializar um servidor http simples
 const server = http.createServer(app);
+// SE COLOCAR O SERVER DENTRO DE ENABLEWS ELE FUNCIONA A ROTA MAS NÃO FUNCIONA O FLUXO DO CÓDIGO
 //inicializar a instância do servidor WebSocket
 const wss = new WebSocket.Server({ server });
 const CLIENTS = [];
 const TODOSCLIENTES = [];
+const routeWS = enableWs(app);
+routeWS.ws('/echo', (ws, req) => {
+    console.log("TESTANDOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOO");
+});
 class Cliente {
     constructor(id, nome) {
         this.id = id;
@@ -17,14 +24,6 @@ class Cliente {
     }
 }
 var isAlive = true;
-var ReceptorID = 0;
-app.get('ws://localhost:8999/private/:id', function (req, res, next) {
-    ReceptorID = req.params.id;
-    console.log("ENTROU PELO URL");
-    next();
-}, function (req, res, next) {
-    res.send('User Info');
-});
 wss.on('connection', (ws) => {
     const cliente = {
         id: CLIENTS.length,
@@ -52,7 +51,7 @@ wss.on('connection', (ws) => {
             });
         }
         else if (cliente.id === 0 || cliente.id === 2) {
-            send(message, cliente.name, cliente, ReceptorID);
+            send(message, cliente.name, cliente);
             ws.send(`${cliente.name} -> ${message}`);
         }
         else {
@@ -61,11 +60,9 @@ wss.on('connection', (ws) => {
     });
     ws.onclose = function (e) {
         console.log("REMOVENDO O ID: ", cliente.id);
-        //delete TODOSCLIENTES[cliente.id];
-        console.log("LISTA DE USUARIOS", TODOSCLIENTES);
+        //delete TODOSCLIENTES[cliente.id];        
         remove(TODOSCLIENTES, cliente);
         console.log("LISTA DE USUARIOS", TODOSCLIENTES);
-        console.log("LISTA DE USUARIOS", TODOSCLIENTES.length);
     };
     //enviar imediatamente um feedback para a conexão de entrada
     ws.send("WELCOME " + cliente.name);
@@ -76,16 +73,14 @@ function remove(array, element) {
     console.log("POSICAO", index);
     array.splice(index, 1);
 }
-function send(message, name, user, idReceptor) {
-    /*
+function send(message, name, user) {
     if (user.id === 0) {
         CLIENTS[2].send("Message from " + name + ": " + message);
     }
     if (user.id === 2) {
         CLIENTS[0].send("Message from " + name + ": " + message);
     }
-    */
-    CLIENTS[idReceptor].send("Message from " + name + ": " + message);
+    //CLIENTS[idReceptor].send("Message from " + name + ": " + message);
     /*
     //Se for usar Dinamicamente, apenas é preciso pegar o ID do receptor (receptor) atraves de um parametro
     CLIENTS[receptor.id].send("Message from " + user.name + ": " + message);
@@ -102,6 +97,13 @@ function usersOnline() {
 }
 app.get('/allOnline', function (req, res) {
     res.send(usersOnline());
+});
+app.get('/private/:id', function (req, res, next) {
+    const ReceptorID = req.params.id;
+    console.log("ENTROU PELO URL", ReceptorID);
+    next();
+}, function (req, res, next) {
+    res.send('User Info');
 });
 //start our server
 server.listen(8999, () => {
