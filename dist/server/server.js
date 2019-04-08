@@ -17,6 +17,14 @@ class Cliente {
     }
 }
 var isAlive = true;
+var ReceptorID = 0;
+app.get('ws://localhost:8999/private/:id', function (req, res, next) {
+    ReceptorID = req.params.id;
+    console.log("ENTROU PELO URL");
+    next();
+}, function (req, res, next) {
+    res.send('User Info');
+});
 wss.on('connection', (ws) => {
     const cliente = {
         id: CLIENTS.length,
@@ -44,7 +52,7 @@ wss.on('connection', (ws) => {
             });
         }
         else if (cliente.id === 0 || cliente.id === 2) {
-            send(message, cliente.name, cliente);
+            send(message, cliente.name, cliente, ReceptorID);
             ws.send(`${cliente.name} -> ${message}`);
         }
         else {
@@ -68,13 +76,16 @@ function remove(array, element) {
     console.log("POSICAO", index);
     array.splice(index, 1);
 }
-function send(message, name, user) {
+function send(message, name, user, idReceptor) {
+    /*
     if (user.id === 0) {
-        CLIENTS[1].send("Message from " + name + ": " + message);
+        CLIENTS[2].send("Message from " + name + ": " + message);
     }
     if (user.id === 2) {
         CLIENTS[0].send("Message from " + name + ": " + message);
     }
+    */
+    CLIENTS[idReceptor].send("Message from " + name + ": " + message);
     /*
     //Se for usar Dinamicamente, apenas é preciso pegar o ID do receptor (receptor) atraves de um parametro
     CLIENTS[receptor.id].send("Message from " + user.name + ": " + message);
@@ -83,12 +94,15 @@ function send(message, name, user) {
 ;
 function usersOnline() {
     //const listaCliente = CLIENTS.map(resposta => resposta.name);
-    let message = " USUARIOS ONLINE";
+    let message = " USUARIOS ONLINE:";
     for (var i = 0; i < TODOSCLIENTES.length; i++) {
-        message += "\n=>" + TODOSCLIENTES[i].name + " ";
+        message += " " + TODOSCLIENTES[i].name + ", ";
     }
     return message;
 }
+app.get('/allOnline', function (req, res) {
+    res.send(usersOnline());
+});
 //start our server
 server.listen(8999, () => {
     console.clear();
